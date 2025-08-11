@@ -119,6 +119,7 @@ rollback:
   variables:
     ENVIRONMENT: "production"
     ANSIBLE_USER: "$PRODUCTION_SSH_USER"
+```
 
 ## GitLab CI/CD Variables Setup
 
@@ -146,14 +147,14 @@ PRODUCTION_SSH_USER (Variable, Protected, Masked) = "admin"
 ### ✅ **What Was Requested:**
 
 1. **Outline a CI/CD GitLab pipeline for deploying updates to the API**
-   - Simple 4-stage pipeline: Validate → Test → Deploy → Verify
+   - Simple 5-stage pipeline: Validate → Test → Deploy → Verify → Rollback
    - Basic GitLab CI/CD configuration
 
 2. **Show how to automate testing, build, deployment, and rollback**
    - **Testing**: Docker testing + Ansible dry runs
    - **Build**: Infrastructure deployment with Ansible
    - **Deployment**: Staging and production environments
-   - **Rollback**: Basic rollback capability
+   - **Rollback**: Rollback stage using maintenance playbook
 
 3. **Address secrets management and environment configuration**
    - **Secrets**: GitLab CI/CD variables for SSH keys and usernames
@@ -165,6 +166,7 @@ This pipeline provides the essential CI/CD functionality requested:
 - Automated testing using Docker
 - Infrastructure deployment to staging and production
 - Basic health verification
+- Rollback capability using maintenance playbook
 - Simple secrets management
 
-The approach is practical and focused on the actual requirements. 
+The approach is practical and focused on the actual requirements.
