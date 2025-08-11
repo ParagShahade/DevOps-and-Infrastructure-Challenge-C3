@@ -1,0 +1,28 @@
+server {
+    listen 443 ssl;
+    server_name _;
+
+    ssl_certificate {{ ssl_cert_path }};
+    ssl_certificate_key {{ ssl_key_path }};
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        return 200 "API Server Running on {{ inventory_hostname }}";
+        add_header Content-Type text/plain;
+        add_header X-Server {{ inventory_hostname }};
+    }
+
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
+
+server {
+    listen 80;
+    server_name _;
+    return 301 https://$server_name$request_uri;
+}

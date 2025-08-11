@@ -1,0 +1,100 @@
+
+
+services:
+  loadbalancer:
+    image: ubuntu:20.04
+    container_name: lb-test
+    hostname: loadbalancer
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "2222:22"
+    networks:
+      test-network:
+        ipv4_address: 192.168.10.2
+    volumes:
+      - .:/ansible
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y openssh-server openssh-client sudo python3
+        mkdir -p /var/run/sshd
+        echo 'root:password' | chpasswd
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        service ssh start
+        tail -f /dev/null
+      "
+
+  server-a:
+    image: ubuntu:20.04
+    container_name: server-a-test
+    hostname: server-a
+    ports:
+      - "8081:80"
+      - "8444:443"
+      - "2223:22"
+    networks:
+      test-network:
+        ipv4_address: 192.168.10.3
+    volumes:
+      - .:/ansible
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y openssh-server openssh-client sudo python3
+        mkdir -p /var/run/sshd
+        echo 'root:password' | chpasswd
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        service ssh start
+        tail -f /dev/null
+      "
+
+  server-b:
+    image: ubuntu:20.04
+    container_name: server-b-test
+    hostname: server-b
+    ports:
+      - "8082:80"
+      - "8445:443"
+      - "2224:22"
+    networks:
+      test-network:
+        ipv4_address: 192.168.10.4
+    volumes:
+      - .:/ansible
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y openssh-server openssh-client sudo python3
+        mkdir -p /var/run/sshd
+        echo 'root:password' | chpasswd
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        service ssh start
+        tail -f /dev/null
+      "
+
+  zabbix:
+    image: ubuntu:20.04
+    container_name: zabbix-test
+    hostname: zabbix
+    ports:
+      - "8083:80"
+      - "2225:22"
+    networks:
+      test-network:
+        ipv4_address: 192.168.10.5
+    volumes:
+      - .:/ansible
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y openssh-server openssh-client sudo python3
+        mkdir -p /var/run/sshd
+        echo 'root:password' | chpasswd
+        sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+        service ssh start
+        tail -f /dev/null
+      "
+
+networks:
+  test-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.10.0/24

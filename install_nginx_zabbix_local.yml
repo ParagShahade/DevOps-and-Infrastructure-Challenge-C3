@@ -1,0 +1,59 @@
+---
+- name: Install Nginx and Zabbix Agent on API servers (Local)
+  hosts: localhost
+  connection: local
+  become: true
+
+  vars:
+    ssl_cert_path: /etc/nginx/ssl/server.crt
+    ssl_key_path: /etc/nginx/ssl/server.key
+
+  tasks:
+    - name: Install Nginx and Zabbix Agent
+      package:
+        name:
+          - nginx
+          - zabbix-agent
+        state: present
+
+    - name: Create SSL directory
+      file:
+        path: /etc/nginx/ssl
+        state: directory
+        mode: "0o755"
+
+    - name: Generate self-signed SSL certificate for API server
+      command: openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout {{ ssl_key_path }} -out {{ ssl_cert_path }} -subj "/C=US/ST=State/L=City/O=Organization/CN={{ inventory_hostname }}"
+      args:
+        creates: "{{ ssl_cert_path }}"
+
+    - name: Deploy Nginx HTTPS config
+      template:
+        src: nginx_https.conf.j2
+        dest: /etc/nginx/conf.d/api_https.conf
+        mode: '0644'
+
+    - name: Start and enable nginx
+      service:
+        name: nginx
+        state: started
+        enabled: true
+
+
+
+    - name: Start and enable Zabbix agent
+      service:
+        name: zabbix-agent
+        state: started
+        enabled: true
+
+    - name: Test Nginx configuration
+      command: nginx -t
+      register: nginx_test
+      changed_when: false
+
+    - name: Reload Nginx if config is valid
+      service:
+        name: nginx
+        state: reloaded
+      when: nginx_test.rc == 0
