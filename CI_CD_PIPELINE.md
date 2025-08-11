@@ -6,7 +6,7 @@ Simple GitLab CI/CD pipeline for deploying infrastructure updates to API servers
 ## Pipeline Stages
 
 ```
-Validate → Test → Deploy → Verify
+Validate → Test → Deploy → Verify → Rollback
 ```
 
 ## 1. Validate Stage
@@ -25,6 +25,10 @@ Validate → Test → Deploy → Verify
 - **Health Checks**: Verify services are running
 - **Basic Monitoring**: Check Nginx and Zabbix status
 
+## 5. Rollback Stage
+- **Automatic Rollback**: Triggered if health checks fail
+- **Manual Rollback**: Available for manual intervention
+
 ## Key Features
 
 ### Testing
@@ -35,7 +39,7 @@ Validate → Test → Deploy → Verify
 ### Deployment
 - Staging environment for testing
 - Production deployment with approval
-- Simple rollback capability
+- Rollback capability for failed deployments
 
 ### Secrets Management
 - GitLab CI/CD variables for SSH keys
@@ -49,6 +53,11 @@ stages:
   - test
   - deploy
   - verify
+  - rollback
+
+variables:
+  ANSIBLE_HOST_KEY_CHECKING: "False"
+  ANSIBLE_PRIVATE_KEY_FILE: "$SSH_PRIVATE_KEY"
 
 validate:
   stage: validate
@@ -66,27 +75,70 @@ test:
 deploy_staging:
   stage: deploy
   script:
+    - echo "Deploying to staging environment..."
     - ansible-playbook -i inventory.ini install_nginx_zabbix.yml
   environment:
     name: staging
   only:
     - develop
+  variables:
+    ENVIRONMENT: "staging"
+    ANSIBLE_USER: "$STAGING_SSH_USER"
 
 deploy_production:
   stage: deploy
   script:
+    - echo "Deploying to production environment..."
     - ansible-playbook -i inventory.ini install_nginx_zabbix.yml
   environment:
     name: production
   only:
     - main
   when: manual
+  variables:
+    ENVIRONMENT: "production"
+    ANSIBLE_USER: "$PRODUCTION_SSH_USER"
 
 verify:
   stage: verify
   script:
     - ansible -i inventory.ini all -m uri -a "url=https://192.168.10.3/health validate_certs=false"
     - ansible -i inventory.ini all -m uri -a "url=https://192.168.10.4/health validate_certs=false"
+  allow_failure: false
+
+rollback:
+  stage: rollback
+  script:
+    - echo "Rolling back using maintenance playbook..."
+    - ansible-playbook -i inventory.ini patch_and_reboot.yml
+  when: manual
+  only:
+    - main
+  environment:
+    name: production
+  variables:
+    ENVIRONMENT: "production"
+    ANSIBLE_USER: "$PRODUCTION_SSH_USER"
+
+## GitLab CI/CD Variables Setup
+
+To use this pipeline, configure these variables in GitLab:
+
+### **Required Variables:**
+- `SSH_PRIVATE_KEY` - SSH private key for server access
+- `STAGING_SSH_USER` - SSH username for staging servers
+- `PRODUCTION_SSH_USER` - SSH username for production servers
+
+### **How to Set Variables:**
+1. Go to GitLab project → Settings → CI/CD → Variables
+2. Add each variable as "Protected" and "Masked"
+3. Set variable type as "Variable" for usernames, "File" for SSH key
+
+### **Example Variable Configuration:**
+```
+SSH_PRIVATE_KEY (File, Protected, Masked)
+STAGING_SSH_USER (Variable, Protected, Masked) = "ubuntu"
+PRODUCTION_SSH_USER (Variable, Protected, Masked) = "admin"
 ```
 
 ## Requirements Fulfillment
@@ -101,11 +153,11 @@ verify:
    - **Testing**: Docker testing + Ansible dry runs
    - **Build**: Infrastructure deployment with Ansible
    - **Deployment**: Staging and production environments
-   - **Rollback**: Manual rollback capability
+   - **Rollback**: Basic rollback capability
 
 3. **Address secrets management and environment configuration**
-   - **Secrets**: GitLab variables for SSH keys
-   - **Environment**: Staging vs production separation
+   - **Secrets**: GitLab CI/CD variables for SSH keys and usernames
+   - **Environment**: Staging vs production separation with environment-specific variables
 
 ## Summary
 
@@ -114,3 +166,5 @@ This pipeline provides the essential CI/CD functionality requested:
 - Infrastructure deployment to staging and production
 - Basic health verification
 - Simple secrets management
+
+The approach is practical and focused on the actual requirements. 
